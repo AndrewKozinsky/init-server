@@ -51,3 +51,7 @@
 ## Создание папки с сайтами
 Установите Докер:
 ```ansible-playbook -i inventory.ini create-sites-folder.yml```
+
+## Создание главного Nginx
+Запустите контейнер с Nginx, который будет связывать запросы на сервер к другим Nginx отвечающих за сайты:
+```ansible-playbook -i inventory.ini run-nginx-proxy.yml```
