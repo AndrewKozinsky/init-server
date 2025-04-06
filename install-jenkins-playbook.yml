@@ -1,0 +1,43 @@
+---
+- name: Install Jenkins on Ubuntu (x86_64)
+  hosts: all
+  become: yes
+
+  tasks:
+
+    - name: Install required dependencies
+      apt:
+        name:
+          - curl
+          - gnupg2
+          - software-properties-common
+        state: present
+        update_cache: yes
+
+    - name: Add Jenkins GPG key (modern method)
+      ansible.builtin.get_url:
+        url: https://pkg.jenkins.io/debian-stable/jenkins.io-2023.key
+        dest: /etc/apt/keyrings/jenkins.asc
+        mode: '0644'
+
+    - name: Add Jenkins apt repository
+      ansible.builtin.apt_repository:
+        repo: "deb [signed-by=/etc/apt/keyrings/jenkins.asc] https://pkg.jenkins.io/debian-stable binary/"
+        state: present
+        filename: jenkins
+
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+        cache_valid_time: 3600
+
+    - name: Install Jenkins
+      apt:
+        name: jenkins
+        state: latest
+
+    - name: Ensure Jenkins is enabled and started
+      systemd:
+        name: jenkins
+        enabled: yes
+        state: started

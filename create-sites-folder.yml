@@ -1,0 +1,12 @@
+---
+- name: Create 'sites' folder in root directory
+  hosts: all
+  become: true  # This is needed because writing to root (/) requires sudo
+  tasks:
+    - name: Ensure /sites directory exists
+      file:
+        path: /home/sites/
+        state: directory
+        owner: root
+        group: root
+        mode: '0755'

@@ -1,0 +1,34 @@
+---
+- name: Set up nginx-proxy with Docker and Ansible
+  hosts: all
+  become: true
+
+  vars:
+    sites_dir: /home/sites
+    proxy_dir: /home/sites/proxy
+
+  tasks:
+    - name: Create Docker network (ignore if already exists)
+      command: docker network create nginx-proxy
+      register: create_network_result
+      failed_when: create_network_result.rc != 0 and '"already exists"' not in create_network_result.stderr
+      changed_when: "'already exists' not in create_network_result.stderr"
+
+    - name: Ensure /home/sites/proxy directory exists
+      file:
+        path: "{{ proxy_dir }}"
+        state: directory
+        owner: "{{ ansible_user | default('root') }}"
+        mode: '0755'
+
+    - name: Copy docker-compose.yml to remote host
+      copy:
+        src: ./nginx-proxy/docker-compose.yml
+        dest: "{{ proxy_dir }}/docker-compose.yml"
+        owner: "{{ ansible_user | default('root') }}"
+        mode: '0644'
+
+    - name: Run docker-compose up
+      command: docker-compose up -d
+      args:
+        chdir: "{{ proxy_dir }}"
