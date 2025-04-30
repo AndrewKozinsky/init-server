@@ -42,11 +42,11 @@
 
 ## Установка Докера
 Установите Докер:
-```ansible-playbook -i inventory.ini install-docker-playbook.yml```
+```ansible-playbook -i inventory.ini install-docker-playbook.yml -K```
 
 ## Установка Дженкинса
 Установите Докер:
-```ansible-playbook -i inventory.ini install-jenkins-playbook.yml```
+```ansible-playbook -i inventory.ini install-jenkins-playbook.yml -K```
 
 ## Создание папки с сайтами
 Установите Докер:

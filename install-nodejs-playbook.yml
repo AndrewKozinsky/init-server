@@ -1,0 +1,114 @@
+---
+- name: Install Node.js and Yarn
+  hosts: all
+  become: yes
+  vars:
+    node_version: "22.x"  # Current LTS version
+    node_arch: "linux-x64"   # Change to "linux-arm64" for ARM systems
+
+  tasks:
+    - name: Check if Node.js is already installed
+      command: which node || which nodejs
+      register: node_installed
+      ignore_errors: yes
+      changed_when: false
+
+    - name: Set installation flag
+      ansible.builtin.set_fact:
+        node_install_required: "{{ node_installed.rc != 0 }}"
+
+    - name: Install basic dependencies
+      apt:
+        name: [curl, build-essential]
+        state: present
+        update_cache: yes
+      when:
+        - ansible_os_family == 'Debian'
+        - node_install_required
+
+    - name: Install basic dependencies (RedHat)
+      yum:
+        name: [curl, make, gcc-c++]
+        state: present
+      when:
+        - ansible_os_family == 'RedHat'
+        - node_install_required
+
+    - name: Download and install Node.js binary
+      block:
+        - name: Download Node.js
+          get_url:
+            url: "https://nodejs.org/dist/v{{ node_version }}/node-v{{ node_version }}-{{ node_arch }}.tar.xz"
+            dest: /tmp/node.tar.xz
+            checksum: "sha256:https://nodejs.org/dist/v{{ node_version }}/SHASUMS256.txt"
+
+        - name: Create installation directory
+          file:
+            path: /usr/local/lib/nodejs
+            state: directory
+            mode: '0755'
+
+        - name: Extract Node.js
+          unarchive:
+            src: /tmp/node.tar.xz
+            dest: /usr/local/lib/nodejs
+            remote_src: yes
+            extra_opts: "--strip-components=1"
+
+        - name: Add Node.js to system PATH
+          copy:
+            dest: /etc/profile.d/nodejs.sh
+            content: |
+              #!/bin/sh
+              export PATH=/usr/local/lib/nodejs/bin:$PATH
+            mode: '0644'
+
+        - name: Create symlinks in /usr/local/bin
+          file:
+            src: "/usr/local/lib/nodejs/bin/{{ item }}"
+            dest: "/usr/local/bin/{{ item }}"
+            state: link
+            force: yes
+          loop: [ "node", "npm", "npx" ]
+
+      when: node_install_required
+
+    - name: Install Yarn
+      block:
+        - name: Install Yarn via npm
+          command: npm install --global yarn
+          environment:
+            PATH: "/usr/local/lib/nodejs/bin:/usr/local/bin:/usr/bin:/bin:/usr/local/games:/usr/games"
+
+        - name: Create Yarn symlink
+          file:
+            src: "/usr/local/lib/nodejs/bin/yarn"
+            dest: "/usr/local/bin/yarn"
+            state: link
+            force: yes
+
+      when: node_install_required
+
+    - name: Verify installations
+      block:
+        - name: Get Node.js version
+          command: node --version
+          register: node_version_out
+          changed_when: false
+
+        - name: Get npm version
+          command: npm --version
+          register: npm_version_out
+          changed_when: false
+
+        - name: Get Yarn version
+          command: yarn --version
+          register: yarn_version_out
+          changed_when: false
+
+        - name: Show versions
+          debug:
+            msg: |
+              Node.js: {{ node_version_out.stdout }}
+              npm: {{ npm_version_out.stdout }}
+              Yarn: {{ yarn_version_out.stdout }}
